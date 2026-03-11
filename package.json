@@ -1,6 +1,6 @@
 {
   "name": "@flyweightdev/convex-audit",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A unified, table-agnostic audit log component for Convex",
   "type": "module",
   "license": "Apache-2.0",
@@ -42,6 +42,9 @@
     "codegen": "npx convex codegen --component-dir ./src/component",
     "build:clean": "rm -rf dist *.tsbuildinfo && npm run build",
     "prepublishOnly": "npm run build:clean"
+  },
+  "dependencies": {
+    "convex-helpers": "^0.1.67"
   },
   "peerDependencies": {
     "convex": ">=1.31.0"

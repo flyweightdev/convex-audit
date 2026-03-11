@@ -1,6 +1,8 @@
 import { mutation, query } from "./_generated/server.js";
 import { paginationOptsValidator } from "convex/server";
+import { paginator } from "convex-helpers/server/pagination";
 import { v } from "convex/values";
+import schema from "./schema.js";
 
 const auditLogDoc = v.object({
   _id: v.id("auditLogs"),
@@ -151,10 +153,14 @@ function selectIndex(params: FilterParams): {
   };
 }
 
-// Build the index query with equality prefixes and optional timestamp range bounds.
+// Build an index query using the given query builder (e.g. paginator(db, schema) or db).
 // Uses `any` because Convex's IndexRangeBuilder type changes shape with each
 // chained call, making conditional chaining impossible with strict types.
-function buildIndexQuery(db: any, index: IndexChoice, params: FilterParams) {
+function buildQueryWithBuilder(
+  builder: any,
+  index: IndexChoice,
+  params: FilterParams,
+) {
   const {
     filterDocumentId,
     filterUserId,
@@ -166,7 +172,7 @@ function buildIndexQuery(db: any, index: IndexChoice, params: FilterParams) {
 
   switch (index) {
     case "by_table_documentId_and_timestamp":
-      return db
+      return builder
         .query("auditLogs")
         .withIndex("by_table_documentId_and_timestamp", (q: any) => {
           let r = q.eq("table", filterTable).eq("documentId", filterDocumentId);
@@ -176,14 +182,14 @@ function buildIndexQuery(db: any, index: IndexChoice, params: FilterParams) {
         });
 
     case "by_documentId":
-      return db
+      return builder
         .query("auditLogs")
         .withIndex("by_documentId", (q: any) =>
           q.eq("documentId", filterDocumentId),
         );
 
     case "by_userId_action_and_timestamp":
-      return db
+      return builder
         .query("auditLogs")
         .withIndex("by_userId_action_and_timestamp", (q: any) => {
           let r = q.eq("userId", filterUserId).eq("action", filterAction);
@@ -193,7 +199,7 @@ function buildIndexQuery(db: any, index: IndexChoice, params: FilterParams) {
         });
 
     case "by_userId_and_timestamp":
-      return db
+      return builder
         .query("auditLogs")
         .withIndex("by_userId_and_timestamp", (q: any) => {
           let r = q.eq("userId", filterUserId);
@@ -203,7 +209,7 @@ function buildIndexQuery(db: any, index: IndexChoice, params: FilterParams) {
         });
 
     case "by_action_and_timestamp":
-      return db
+      return builder
         .query("auditLogs")
         .withIndex("by_action_and_timestamp", (q: any) => {
           let r = q.eq("action", filterAction);
@@ -213,7 +219,7 @@ function buildIndexQuery(db: any, index: IndexChoice, params: FilterParams) {
         });
 
     case "by_table_and_timestamp":
-      return db
+      return builder
         .query("auditLogs")
         .withIndex("by_table_and_timestamp", (q: any) => {
           let r = q.eq("table", filterTable);
@@ -223,7 +229,7 @@ function buildIndexQuery(db: any, index: IndexChoice, params: FilterParams) {
         });
 
     case "by_timestamp":
-      return db.query("auditLogs").withIndex("by_timestamp", (q: any) => {
+      return builder.query("auditLogs").withIndex("by_timestamp", (q: any) => {
         let r = q;
         if (filterAfter !== undefined) r = r.gte("timestamp", filterAfter);
         if (filterBefore !== undefined) r = r.lte("timestamp", filterBefore);
@@ -255,7 +261,6 @@ function applyPostFilters(
     }
   }
 
-  // Timestamp range post-filters only needed for by_documentId (no timestamp in index)
   if (needsTimestampPostFilter) {
     if (params.filterAfter !== undefined) {
       result = result.filter((qf: any) =>
@@ -299,7 +304,7 @@ export const listAuditLogs = query({
     const params: FilterParams = args;
     const { index, coveredFields, needsTimestampPostFilter } =
       selectIndex(params);
-    const q = buildIndexQuery(ctx.db, index, params);
+    const q = buildQueryWithBuilder(paginator(ctx.db, schema), index, params);
     const ordered = applyPostFilters(
       q.order("desc"),
       params,
@@ -353,17 +358,17 @@ export const countAuditLogs = query({
     const params: FilterParams = args;
     const { index, coveredFields, needsTimestampPostFilter } =
       selectIndex(params);
+    const q = buildQueryWithBuilder(paginator(ctx.db, schema), index, params);
+    const ordered = applyPostFilters(
+      q.order("desc"),
+      params,
+      coveredFields,
+      needsTimestampPostFilter,
+    );
     let count = 0;
     let cursor: string | null = null;
 
     while (true) {
-      const q = buildIndexQuery(ctx.db, index, params);
-      const ordered = applyPostFilters(
-        q.order("desc"),
-        params,
-        coveredFields,
-        needsTimestampPostFilter,
-      );
       const result: {
         continueCursor: string;
         isDone: boolean;
