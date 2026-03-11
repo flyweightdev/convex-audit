@@ -56,6 +56,12 @@ export const insertBulkAuditLogs = mutation({
   },
   returns: v.array(v.id("auditLogs")),
   handler: async (ctx, args) => {
+    if (args.events.length > MAX_BULK_EVENTS) {
+      throw new Error(
+        `\`events\` must contain at most ${MAX_BULK_EVENTS} audit records per call.`,
+      );
+    }
+
     const timestamp = Date.now();
     const ids = [];
     for (const event of args.events) {
@@ -328,8 +334,10 @@ export const getByDocumentId = query({
 /**
  * Count matching audit events. Supports the same filters as `listAuditLogs`.
  *
- * Counts matching audit events in bounded pages to avoid loading the full
- * result set into memory at once.
+ * Returns an exact count by paginating through all matching documents.
+ * This is O(n) where n is the number of matching records — use narrow filters
+ * (userId, action, timestamp range) to keep queries fast. For very large
+ * result sets this may hit Convex query read limits.
  */
 export const countAuditLogs = query({
   args: {
@@ -374,6 +382,7 @@ export const countAuditLogs = query({
   },
 });
 
+const MAX_BULK_EVENTS = 500;
 const DEFAULT_DOCUMENT_HISTORY_LIMIT = 100;
 const MAX_DOCUMENT_HISTORY_LIMIT = 500;
 const COUNT_PAGE_SIZE = 500;

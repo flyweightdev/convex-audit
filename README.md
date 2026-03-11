@@ -278,7 +278,7 @@ Log a single audit event. Call inside a mutation.
 
 ### `audit.logMany(ctx, events)`
 
-Log multiple audit events in one call. All events get the same timestamp. Call inside a mutation.
+Log multiple audit events in one call. All events get the same timestamp. Maximum **500 events** per call — chunk larger batches on the caller side. Call inside a mutation.
 
 ### `audit.list(ctx, params)`
 
@@ -290,7 +290,7 @@ Get the most recent audit entries for a single document, newest-first. `limit` d
 
 ### `audit.count(ctx, params?)`
 
-Count matching audit events. Supports the same filters as `list` (except pagination). Call inside a query.
+Count matching audit events. Supports the same filters as `list` (except pagination). Returns an exact count. This is O(n) — use narrow filters to keep it fast. Call inside a query.
 
 ### `audit.purge(ctx, { before })`
 
