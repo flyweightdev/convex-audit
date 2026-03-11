@@ -44,7 +44,7 @@
     "prepublishOnly": "npm run build:clean"
   },
   "dependencies": {
-    "convex-helpers": ">=0.1.67"
+    "convex-helpers": "^0.1.67"
   },
   "peerDependencies": {
     "convex": ">=1.31.0"

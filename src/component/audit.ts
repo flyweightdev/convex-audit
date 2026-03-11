@@ -153,205 +153,89 @@ function selectIndex(params: FilterParams): {
   };
 }
 
-// Build the index query with equality prefixes and optional timestamp range bounds.
+// Build an index query using the given query builder (e.g. paginator(db, schema) or db).
 // Uses `any` because Convex's IndexRangeBuilder type changes shape with each
 // chained call, making conditional chaining impossible with strict types.
-function buildIndexQuery(db: any, index: IndexChoice, params: FilterParams) {
-  const {
-    filterDocumentId,
-    filterUserId,
-    filterAction,
-    filterTable,
-    filterAfter,
-    filterBefore,
-  } = params;
-
-  switch (index) {
-    case "by_table_documentId_and_timestamp":
-      return db
-        .query("auditLogs")
-        .withIndex("by_table_documentId_and_timestamp", (q: any) => {
-          let r = q.eq("table", filterTable).eq("documentId", filterDocumentId);
-          if (filterAfter !== undefined) r = r.gte("timestamp", filterAfter);
-          if (filterBefore !== undefined) r = r.lte("timestamp", filterBefore);
-          return r;
-        });
-
-    case "by_documentId":
-      return db
-        .query("auditLogs")
-        .withIndex("by_documentId", (q: any) =>
-          q.eq("documentId", filterDocumentId),
-        );
-
-    case "by_userId_action_and_timestamp":
-      return db
-        .query("auditLogs")
-        .withIndex("by_userId_action_and_timestamp", (q: any) => {
-          let r = q.eq("userId", filterUserId).eq("action", filterAction);
-          if (filterAfter !== undefined) r = r.gte("timestamp", filterAfter);
-          if (filterBefore !== undefined) r = r.lte("timestamp", filterBefore);
-          return r;
-        });
-
-    case "by_userId_and_timestamp":
-      return db
-        .query("auditLogs")
-        .withIndex("by_userId_and_timestamp", (q: any) => {
-          let r = q.eq("userId", filterUserId);
-          if (filterAfter !== undefined) r = r.gte("timestamp", filterAfter);
-          if (filterBefore !== undefined) r = r.lte("timestamp", filterBefore);
-          return r;
-        });
-
-    case "by_action_and_timestamp":
-      return db
-        .query("auditLogs")
-        .withIndex("by_action_and_timestamp", (q: any) => {
-          let r = q.eq("action", filterAction);
-          if (filterAfter !== undefined) r = r.gte("timestamp", filterAfter);
-          if (filterBefore !== undefined) r = r.lte("timestamp", filterBefore);
-          return r;
-        });
-
-    case "by_table_and_timestamp":
-      return db
-        .query("auditLogs")
-        .withIndex("by_table_and_timestamp", (q: any) => {
-          let r = q.eq("table", filterTable);
-          if (filterAfter !== undefined) r = r.gte("timestamp", filterAfter);
-          if (filterBefore !== undefined) r = r.lte("timestamp", filterBefore);
-          return r;
-        });
-
-    case "by_timestamp":
-      return db.query("auditLogs").withIndex("by_timestamp", (q: any) => {
-        let r = q;
-        if (filterAfter !== undefined) r = r.gte("timestamp", filterAfter);
-        if (filterBefore !== undefined) r = r.lte("timestamp", filterBefore);
-        return r;
-      });
-  }
-}
-
-// Build a paginator-based index query (component-safe replacement for .paginate())
-function buildPaginatorQuery(db: any, index: IndexChoice, params: FilterParams) {
-  const {
-    filterDocumentId,
-    filterUserId,
-    filterAction,
-    filterTable,
-    filterAfter,
-    filterBefore,
-  } = params;
-
-  const p = paginator(db, schema);
-
-  switch (index) {
-    case "by_table_documentId_and_timestamp":
-      return p
-        .query("auditLogs")
-        .withIndex("by_table_documentId_and_timestamp", (q: any) => {
-          let r = q.eq("table", filterTable).eq("documentId", filterDocumentId);
-          if (filterAfter !== undefined) r = r.gte("timestamp", filterAfter);
-          if (filterBefore !== undefined) r = r.lte("timestamp", filterBefore);
-          return r;
-        });
-
-    case "by_documentId":
-      return p
-        .query("auditLogs")
-        .withIndex("by_documentId", (q: any) =>
-          q.eq("documentId", filterDocumentId),
-        );
-
-    case "by_userId_action_and_timestamp":
-      return p
-        .query("auditLogs")
-        .withIndex("by_userId_action_and_timestamp", (q: any) => {
-          let r = q.eq("userId", filterUserId).eq("action", filterAction);
-          if (filterAfter !== undefined) r = r.gte("timestamp", filterAfter);
-          if (filterBefore !== undefined) r = r.lte("timestamp", filterBefore);
-          return r;
-        });
-
-    case "by_userId_and_timestamp":
-      return p
-        .query("auditLogs")
-        .withIndex("by_userId_and_timestamp", (q: any) => {
-          let r = q.eq("userId", filterUserId);
-          if (filterAfter !== undefined) r = r.gte("timestamp", filterAfter);
-          if (filterBefore !== undefined) r = r.lte("timestamp", filterBefore);
-          return r;
-        });
-
-    case "by_action_and_timestamp":
-      return p
-        .query("auditLogs")
-        .withIndex("by_action_and_timestamp", (q: any) => {
-          let r = q.eq("action", filterAction);
-          if (filterAfter !== undefined) r = r.gte("timestamp", filterAfter);
-          if (filterBefore !== undefined) r = r.lte("timestamp", filterBefore);
-          return r;
-        });
-
-    case "by_table_and_timestamp":
-      return p
-        .query("auditLogs")
-        .withIndex("by_table_and_timestamp", (q: any) => {
-          let r = q.eq("table", filterTable);
-          if (filterAfter !== undefined) r = r.gte("timestamp", filterAfter);
-          if (filterBefore !== undefined) r = r.lte("timestamp", filterBefore);
-          return r;
-        });
-
-    case "by_timestamp":
-      return p.query("auditLogs").withIndex("by_timestamp", (q: any) => {
-        let r = q;
-        if (filterAfter !== undefined) r = r.gte("timestamp", filterAfter);
-        if (filterBefore !== undefined) r = r.lte("timestamp", filterBefore);
-        return r;
-      });
-  }
-}
-
-// Apply post-filters for paginator queries
-function applyPaginatorPostFilters(
-  query: any,
+function buildQueryWithBuilder(
+  builder: any,
+  index: IndexChoice,
   params: FilterParams,
-  coveredFields: Set<string>,
-  needsTimestampPostFilter: boolean,
 ) {
-  let result = query;
+  const {
+    filterDocumentId,
+    filterUserId,
+    filterAction,
+    filterTable,
+    filterAfter,
+    filterBefore,
+  } = params;
 
-  const filters: Array<{ field: string; key: keyof FilterParams }> = [
-    { field: "table", key: "filterTable" },
-    { field: "action", key: "filterAction" },
-    { field: "userId", key: "filterUserId" },
-    { field: "documentId", key: "filterDocumentId" },
-  ];
+  switch (index) {
+    case "by_table_documentId_and_timestamp":
+      return builder
+        .query("auditLogs")
+        .withIndex("by_table_documentId_and_timestamp", (q: any) => {
+          let r = q.eq("table", filterTable).eq("documentId", filterDocumentId);
+          if (filterAfter !== undefined) r = r.gte("timestamp", filterAfter);
+          if (filterBefore !== undefined) r = r.lte("timestamp", filterBefore);
+          return r;
+        });
 
-  for (const { field, key } of filters) {
-    const value = params[key];
-    if (value !== undefined && !coveredFields.has(field)) {
-      result = result.filter((qf: any) => qf.eq(qf.field(field), value));
-    }
+    case "by_documentId":
+      return builder
+        .query("auditLogs")
+        .withIndex("by_documentId", (q: any) =>
+          q.eq("documentId", filterDocumentId),
+        );
+
+    case "by_userId_action_and_timestamp":
+      return builder
+        .query("auditLogs")
+        .withIndex("by_userId_action_and_timestamp", (q: any) => {
+          let r = q.eq("userId", filterUserId).eq("action", filterAction);
+          if (filterAfter !== undefined) r = r.gte("timestamp", filterAfter);
+          if (filterBefore !== undefined) r = r.lte("timestamp", filterBefore);
+          return r;
+        });
+
+    case "by_userId_and_timestamp":
+      return builder
+        .query("auditLogs")
+        .withIndex("by_userId_and_timestamp", (q: any) => {
+          let r = q.eq("userId", filterUserId);
+          if (filterAfter !== undefined) r = r.gte("timestamp", filterAfter);
+          if (filterBefore !== undefined) r = r.lte("timestamp", filterBefore);
+          return r;
+        });
+
+    case "by_action_and_timestamp":
+      return builder
+        .query("auditLogs")
+        .withIndex("by_action_and_timestamp", (q: any) => {
+          let r = q.eq("action", filterAction);
+          if (filterAfter !== undefined) r = r.gte("timestamp", filterAfter);
+          if (filterBefore !== undefined) r = r.lte("timestamp", filterBefore);
+          return r;
+        });
+
+    case "by_table_and_timestamp":
+      return builder
+        .query("auditLogs")
+        .withIndex("by_table_and_timestamp", (q: any) => {
+          let r = q.eq("table", filterTable);
+          if (filterAfter !== undefined) r = r.gte("timestamp", filterAfter);
+          if (filterBefore !== undefined) r = r.lte("timestamp", filterBefore);
+          return r;
+        });
+
+    case "by_timestamp":
+      return builder.query("auditLogs").withIndex("by_timestamp", (q: any) => {
+        let r = q;
+        if (filterAfter !== undefined) r = r.gte("timestamp", filterAfter);
+        if (filterBefore !== undefined) r = r.lte("timestamp", filterBefore);
+        return r;
+      });
   }
-
-  if (needsTimestampPostFilter) {
-    if (params.filterAfter !== undefined) {
-      result = result.filter((qf: any) =>
-        qf.gte(qf.field("timestamp"), params.filterAfter),
-      );
-    }
-    if (params.filterBefore !== undefined) {
-      result = result.filter((qf: any) =>
-        qf.lte(qf.field("timestamp"), params.filterBefore),
-      );
-    }
-  }
-
-  return result;
 }
 
 // Apply post-filters for fields not covered by the selected index
@@ -377,7 +261,6 @@ function applyPostFilters(
     }
   }
 
-  // Timestamp range post-filters only needed for by_documentId (no timestamp in index)
   if (needsTimestampPostFilter) {
     if (params.filterAfter !== undefined) {
       result = result.filter((qf: any) =>
@@ -421,8 +304,8 @@ export const listAuditLogs = query({
     const params: FilterParams = args;
     const { index, coveredFields, needsTimestampPostFilter } =
       selectIndex(params);
-    const q = buildPaginatorQuery(ctx.db, index, params);
-    const ordered = applyPaginatorPostFilters(
+    const q = buildQueryWithBuilder(paginator(ctx.db, schema), index, params);
+    const ordered = applyPostFilters(
       q.order("desc"),
       params,
       coveredFields,
@@ -475,17 +358,17 @@ export const countAuditLogs = query({
     const params: FilterParams = args;
     const { index, coveredFields, needsTimestampPostFilter } =
       selectIndex(params);
+    const q = buildQueryWithBuilder(paginator(ctx.db, schema), index, params);
+    const ordered = applyPostFilters(
+      q.order("desc"),
+      params,
+      coveredFields,
+      needsTimestampPostFilter,
+    );
     let count = 0;
     let cursor: string | null = null;
 
     while (true) {
-      const q = buildPaginatorQuery(ctx.db, index, params);
-      const ordered = applyPaginatorPostFilters(
-        q.order("desc"),
-        params,
-        coveredFields,
-        needsTimestampPostFilter,
-      );
       const result: {
         continueCursor: string;
         isDone: boolean;
