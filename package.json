@@ -1,0 +1,53 @@
+{
+  "name": "@flyweightdev/convex-audit",
+  "version": "0.1.0",
+  "description": "A unified, table-agnostic audit log component for Convex",
+  "type": "module",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/flyweightdev/convex-audit"
+  },
+  "keywords": [
+    "convex",
+    "audit",
+    "audit-log",
+    "component"
+  ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "module": "./dist/index.js",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "@convex-dev/component-source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./convex.config": {
+      "@convex-dev/component-source": "./src/component/convex.config.ts",
+      "types": "./dist/component/convex.config.d.ts",
+      "default": "./dist/component/convex.config.js"
+    },
+    "./_generated/component.js": {
+      "types": "./dist/component/_generated/component.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsc --project ./tsconfig.build.json",
+    "codegen": "npx convex codegen --component-dir ./src/component",
+    "build:clean": "rm -rf dist *.tsbuildinfo && npm run build",
+    "prepublishOnly": "npm run build:clean"
+  },
+  "peerDependencies": {
+    "convex": ">=1.31.0"
+  },
+  "devDependencies": {
+    "convex": "^1.31.0",
+    "typescript": "~5.9.0"
+  }
+}
