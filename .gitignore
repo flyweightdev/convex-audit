@@ -3,6 +3,7 @@ dist/
 *.tsbuildinfo
 .context/
 .convex/
+convex/
 .env.local
 .env
 *.tgz
